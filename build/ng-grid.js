@@ -2,7 +2,7 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 02/24/2014 12:38
+* Compiled At: 02/25/2014 13:00
 ***********************************************/
 (function(window, $) {
 'use strict';
@@ -1352,22 +1352,6 @@ var ngGrid = function ($scope, options, sortService, domUtilityService, $filter,
         rootMaxH: 0
     };
     self.setRenderedRows = function (newRows) {
-        $scope.renderedRows.length = newRows.length;
-        for (var i = 0; i < newRows.length; i++) {
-            if (!$scope.renderedRows[i] || (newRows[i].isAggRow || $scope.renderedRows[i].isAggRow)) {
-                $scope.renderedRows[i] = newRows[i].copy();
-                $scope.renderedRows[i].collapsed = newRows[i].collapsed;
-                if (!newRows[i].isAggRow) {
-                    $scope.renderedRows[i].setVars(newRows[i]);
-                }
-            } else {
-                $scope.renderedRows[i].setVars(newRows[i]);
-            }
-            $scope.renderedRows[i].rowIndex = newRows[i].rowIndex;
-            $scope.renderedRows[i].offsetTop = newRows[i].offsetTop;
-            $scope.renderedRows[i].selected = newRows[i].selected;
-            newRows[i].renderedRowIndex = i;
-        }
         self.refreshDomSizes();
         $scope.$emit('ngGridEventRows', newRows);
     };
@@ -1750,7 +1734,6 @@ var ngGrid = function ($scope, options, sortService, domUtilityService, $filter,
     };
     $scope.elementsNeedMeasuring = true;
     $scope.columns = [];
-    $scope.renderedRows = [];
     $scope.renderedColumns = [];
     $scope.headerRow = null;
     $scope.rowHeight = self.config.rowHeight;
@@ -1825,18 +1808,13 @@ var ngGrid = function ($scope, options, sortService, domUtilityService, $filter,
         }
         var rowIndex = Math.floor(scrollTop / self.config.rowHeight);
         var newRange;
-        if (self.filteredRows.length > self.config.virtualizationThreshold) {
-            if (self.prevScrollTop < scrollTop && rowIndex < self.prevScrollIndex + SCROLL_THRESHOLD) {
-                return;
-            }
-            if (self.prevScrollTop > scrollTop && rowIndex > self.prevScrollIndex - SCROLL_THRESHOLD) {
-                return;
-            }
-            newRange = new ngRange(Math.max(0, rowIndex - EXCESS_ROWS), rowIndex + self.minRowsToRender() + EXCESS_ROWS);
-        } else {
-            var maxLen = $scope.configGroups.length > 0 ? self.rowFactory.parsedData.length : self.filteredRows.length;
-            newRange = new ngRange(0, Math.max(maxLen, self.minRowsToRender() + EXCESS_ROWS));
+        if (self.prevScrollTop < scrollTop && rowIndex < self.prevScrollIndex + SCROLL_THRESHOLD) {
+            return;
         }
+        if (self.prevScrollTop > scrollTop && rowIndex > self.prevScrollIndex - SCROLL_THRESHOLD) {
+            return;
+        }
+        newRange = new ngRange(Math.max(0, rowIndex - EXCESS_ROWS), rowIndex + self.minRowsToRender() + EXCESS_ROWS);
         self.prevScrollTop = scrollTop;
         self.rowFactory.UpdateViewableRange(newRange);
         self.prevScrollIndex = rowIndex;
@@ -2113,8 +2091,6 @@ var ngRowFactory = function (grid, $scope, domUtilityService, $templateCache, $u
         var rowArr = [];
         for (var i = self.renderedRange.topRow; i < self.renderedRange.bottomRow; i++) {
             if (grid.filteredRows[i]) {
-                grid.filteredRows[i].rowIndex = i;
-                grid.filteredRows[i].offsetTop = i * grid.config.rowHeight;
                 rowArr.push(grid.filteredRows[i]);
             }
         }
@@ -2346,7 +2322,7 @@ var ngSearchProvider = function ($scope, grid, $filter) {
         for (var i = 0; i < grid.filteredRows.length; i++)
         {
             grid.filteredRows[i].rowIndex = i;
-
+            grid.filteredRows[i].offsetTop = i * grid.config.rowHeight;
         }
         grid.rowFactory.filteredRowsChanged();
     };
@@ -3066,10 +3042,10 @@ ngGridDirectives.directive('ngInput', [function() {
                         break;
                     case 27: 
                         if (!scope.$$phase) {
-                            scope.$apply(function() {
-                                ngModel.$setViewValue(oldCellValue);
-                                elm.blur();
-                            });
+                            ngModel.$setViewValue(oldCellValue);
+                            elm.blur();
+
+                            scope.$apply();
                         }
                         break;
                     case 13: 
@@ -3142,51 +3118,156 @@ ngGridDirectives.directive('ngRow', ['$compile', '$domUtilityService', '$templat
     };
     return ngRow;
 }]);
-ngGridDirectives.directive('ngViewport', [function() {
-    return function($scope, elm) {
+angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUtilityService', function ($compile, domUtilityService) {
+    return function ($scope, elm) {
         var isMouseWheelActive;
         var prevScollLeft;
         var prevScollTop = 0;
-        var ensureDigest = function() {
-            if (!$scope.$root.$$phase) {
-                $scope.$digest();
-            }
-        };
-        var scrollTimer;
 
-        function scroll (evt) {
+        var canvas = $('.ngCanvas', elm);
+        var template = "<div row-id='{{ row.rowIndex }}' ng-style=\"rowStyle(row)\" ng-click=\"row.toggleSelected($event)\" ng-class=\"row.alternatingRowClass()\" ng-row></div>\r";
+        var prevRowsToRenderLookup = [];
+
+        $scope.$on('ngGridEventRows', function (ctx, rowsToRender) {
+            var prevRowsToRenderLength = prevRowsToRenderLookup && Object.keys(prevRowsToRenderLookup).length || 0;
+
+            var rowsToRenderLookup = []; 
+            var rowsToReplace = []; 
+            var newRowsToRender = []; 
+            rowsToRender.forEach(function (row) {
+                rowsToRenderLookup[row.rowIndex] = row;
+
+                var previouslyRenderedRow = prevRowsToRenderLookup[row.rowIndex];
+
+                if (!previouslyRenderedRow) { 
+                    newRowsToRender.push(row);
+                }
+                else if (previouslyRenderedRow.entity !== row.entity || previouslyRenderedRow.offsetTop !== row.offsetTop) {
+                    rowsToReplace[row.rowIndex] = true;
+                }
+            });
+
+            var rowsAlreadyRendered = prevRowsToRenderLookup
+                && rowsToRender.length == prevRowsToRenderLength
+                && rowsToReplace.length === 0
+                && newRowsToRender.length === 0;
+
+            if (rowsAlreadyRendered) {
+                return;
+            }
+
+            var allHtmlRows = $('[ng-row]', canvas);
+            rowsToReplace.length > 0 && allHtmlRows.toArray().forEach(function (renderedRow) {
+                var indexOfRenderedRow = Number(renderedRow.attributes['row-id'].value);
+
+                if (rowsToReplace[indexOfRenderedRow]) {
+                    var scopeOfRowToReplace = angular.element(renderedRow).scope();
+                    scopeOfRowToReplace.row = rowsToRenderLookup[indexOfRenderedRow];
+                    domUtilityService.digest(scopeOfRowToReplace);
+                }
+            });
+            if (prevRowsToRenderLength > rowsToRender.length) {
+                removeExcessHtmlRows();
+            }
+
+            function removeExcessHtmlRows() {
+                if (rowsToRender.length === 0) {
+                    allHtmlRows.toArray().forEach(removeHtmlRowFromDom);
+                }
+                else {
+                    allHtmlRows.each(function (idx, row) {
+                        var $row = $(row);
+                        var rowIdAttr = $row.attr('row-id');
+                        var rowIdAsString = isNaN(rowIdAttr)
+                            ? angular.element(row).scope().$eval(rowIdAttr.replace("{{", "").replace("}}", ""))
+                            : rowIdAttr;
+
+                        var rowId = Number(rowIdAsString);
+                        if (!rowsToRenderLookup[rowId]) {
+                            removeHtmlRowFromDom($row);
+                        }
+                    });
+                }
+            }
+
+            function removeHtmlRowFromDom($row) {
+                angular.element($row).scope().$destroy();
+                $row.remove();
+            }
+
+            if (newRowsToRender.length) {
+                var allRows = $('[ng-row]', canvas);
+
+                newRowsToRender.forEach(function (row) {
+
+                    if (allRows.length >= rowsToRender.length) {
+                        var sortedRows = _(allRows) 
+                            .sortBy(function (r) {
+                                return Number(r.attributes['row-id'].value); 
+                            });
+                        var previouslyRenderedRowIdxs = Object.keys(prevRowsToRenderLookup);
+                        var rowToReuse = row.rowIndex > previouslyRenderedRowIdxs[previouslyRenderedRowIdxs.length - 1]
+                                       ? sortedRows[0]
+                                       : sortedRows[sortedRows.length - 1];
+                        var scopeOfRowToReuse = angular.element(rowToReuse).scope();
+                        scopeOfRowToReuse.row = row;
+                        domUtilityService.digest(scopeOfRowToReuse);
+                    }
+                    else {
+                        var scopeOfRowToAdd = $scope.$new(false);
+                        scopeOfRowToAdd.row = row;
+                        var compiledRow = $compile(template)(scopeOfRowToAdd);
+                        canvas.append(compiledRow);
+                        domUtilityService.digest(scopeOfRowToAdd);
+                        allRows.push(compiledRow[0]);
+                    }
+                });
+            }
+
+            prevRowsToRenderLookup = rowsToRenderLookup;
+        });
+
+        var delayRenderingTimer;
+        elm.bind('scroll', function (evt) {
+
             var scrollLeft = evt.target.scrollLeft,
                 scrollTop = evt.target.scrollTop;
+
             if ($scope.$headerContainer) {
                 $scope.$headerContainer.scrollLeft(scrollLeft);
             }
-            $scope.adjustScrollLeft(scrollLeft);
-            $scope.adjustScrollTop(scrollTop);
-            if ($scope.forceSyncScrolling) {
-                ensureDigest();
-            } else {
-                clearTimeout(scrollTimer);
-                scrollTimer = setTimeout(ensureDigest, 150);
+
+            if (prevScollLeft != scrollLeft) {
+                $scope.adjustScrollLeft(scrollLeft);
             }
+            if (prevScollTop != scrollTop) {
+                var gridSize = evt.target.clientHeight;
+
+                if ($scope.forceSyncScrolling
+                    || delayRenderingTimer == null && prevScollTop != scrollTop && Math.abs(prevScollTop - scrollTop) < gridSize * 2) {
+                    $scope.adjustScrollTop(scrollTop);
+                }
+                else {
+                    clearTimeout(delayRenderingTimer);
+
+                    delayRenderingTimer = setTimeout(function () {
+                        $scope.adjustScrollTop(scrollTop);
+                        delayRenderingTimer = null;
+                    }, 100);
+                }
+            }
+
             prevScollLeft = scrollLeft;
             prevScollTop = scrollTop;
             isMouseWheelActive = false;
+
             return true;
-        }
+        });
 
-        elm.bind('scroll', scroll);
-
-        function mousewheel() {
+        elm.bind("mousewheel DOMMouseScroll", function () {
             isMouseWheelActive = true;
             if (elm.focus) { elm.focus(); }
             return true;
-        }
-
-        elm.bind("mousewheel DOMMouseScroll", mousewheel);
-
-        elm.on('$destroy', function() {
-            elm.off('scroll', scroll);
-            elm.off('mousewheel DOMMouseScroll', mousewheel);
         });
 
         if (!$scope.enableCellSelection) {
@@ -3474,11 +3555,7 @@ angular.module('ngGrid').run(['$templateCache', function($templateCache) {
     "\n" +
     "<div class=\"ngViewport\" unselectable=\"on\" ng-viewport ng-class=\"{'ui-widget-content': jqueryUITheme}\" ng-style=\"viewportStyle()\">\r" +
     "\n" +
-    "    <div class=\"ngCanvas\" ng-style=\"canvasStyle()\">\r" +
-    "\n" +
-    "        <div ng-style=\"rowStyle(row)\" ng-repeat=\"row in renderedRows\" ng-click=\"row.toggleSelected($event)\" ng-class=\"row.alternatingRowClass()\" ng-row></div>\r" +
-    "\n" +
-    "    </div>\r" +
+    "    <div class=\"ngCanvas\" ng-style=\"canvasStyle()\"></div>\r" +
     "\n" +
     "</div>\r" +
     "\n" +
