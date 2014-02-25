@@ -97,11 +97,10 @@
     };
 
     self.renderedChangeNoGroups = function () {
+        // Note: for some reason this is actually faster than array.slice()
         var rowArr = [];
         for (var i = self.renderedRange.topRow; i < self.renderedRange.bottomRow; i++) {
             if (grid.filteredRows[i]) {
-                grid.filteredRows[i].rowIndex = i;
-                grid.filteredRows[i].offsetTop = i * grid.config.rowHeight;
                 rowArr.push(grid.filteredRows[i]);
             }
         }

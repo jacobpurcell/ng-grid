@@ -99,7 +99,7 @@
         for (var i = 0; i < grid.filteredRows.length; i++)
         {
             grid.filteredRows[i].rowIndex = i;
-
+            grid.filteredRows[i].offsetTop = i * grid.config.rowHeight;
         }
         grid.rowFactory.filteredRowsChanged();
     };
