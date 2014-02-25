@@ -82,8 +82,11 @@ var ngSelectionProvider = function (grid, $scope, $parse) {
                 self.setSelection(rowItem, !rowItem.selected);
             }
         }
+        else if (!evt.keyCode || evt.type === "click" && !grid.config.selectWithCheckboxOnly) {
+            self.setSelection(rowItem, !rowItem.selected, evt);
+        }
         else if (!evt.keyCode || isUpDownKeyPress && !grid.config.selectWithCheckboxOnly) {
-            self.setSelection(rowItem, !rowItem.selected);
+            self.setSelection(rowItem, !rowItem.selected, evt);
         }
         self.lastClickedRow = rowItem;
         self.lastClickedRowIndex = rowItem.rowIndex;
@@ -111,17 +114,30 @@ var ngSelectionProvider = function (grid, $scope, $parse) {
     };
 
     // just call this func and hand it the rowItem you want to select (or de-select)    
-    self.setSelection = function (rowItem, isSelected) {
+    self.setSelection = function (rowItem, isSelected, evt) {
+        if (grid.config.enableRowSelection) {
+            var allowMultiSelect = self.multi
+                                && ((evt && evt.ctrlKey) || (!evt))
+                                && self.selectedItems.length > 0;
         if(grid.config.enableRowSelection){
             if (!isSelected) {
                 var indx = self.getSelectionIndex(rowItem.entity);
-                if (indx !== -1) {
+                if (allowMultiSelect && indx !== -1) {
                     self.selectedItems.splice(indx, 1);
+                } else {
+                    var isMultipleItemsSelected = self.selectedItems.length > 1;
+                    self.toggleSelectAll(false, true);
+
+                    // TODO: really need to determine whether a mouse click occurred and determine the isSelected based on that
+                    if (evt.type === "click" && isMultipleItemsSelected) {
+                        self.selectedItems.push(rowItem.entity);
+                        isSelected = true;
+                    }
                 }
             }
             else {
                 if (self.getSelectionIndex(rowItem.entity) === -1) {
-                    if (!self.multi && self.selectedItems.length > 0) {
+                    if (!allowMultiSelect) {
                         self.toggleSelectAll(false, true);
                     }
                     self.selectedItems.push(rowItem.entity);
