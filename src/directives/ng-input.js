@@ -19,10 +19,11 @@ ngGridDirectives.directive('ngInput', [function() {
                         break;
                     case 27: // Esc (reset to old value)
                         if (!scope.$$phase) {
-                            scope.$apply(function() {
-                                ngModel.$setViewValue(oldCellValue);
-                                elm.blur();
-                            });
+                            // set ngModel and blur before scope.$apply()
+                            ngModel.$setViewValue(oldCellValue);
+                            elm.blur();
+
+                            scope.$apply();
                         }
                         break;
                     case 13: // Enter (Leave Field)
