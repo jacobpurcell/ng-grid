@@ -2,7 +2,7 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 02/25/2014 13:00
+* Compiled At: 02/25/2014 17:24
 ***********************************************/
 (function(window, $) {
 'use strict';
@@ -125,7 +125,6 @@ var ngMoveSelectionHandler = function($scope, elm, evt, grid) {
         if (r.beforeSelectionChange(r, evt)) {
             r.continueSelection(evt);
             $scope.$emit('ngGridEventDigestGridParent');
-
             if ($scope.selectionProvider.lastClickedRow.renderedRowIndex >= $scope.renderedRows.length - EXCESS_ROWS - 2) {
                 grid.$viewport.scrollTop(grid.$viewport.scrollTop() + $scope.rowHeight);
             }
@@ -2502,8 +2501,11 @@ var ngSelectionProvider = function (grid, $scope, $parse) {
                 self.setSelection(rowItem, !rowItem.selected);
             }
         }
+        else if (!evt.keyCode || evt.type === "click" && !grid.config.selectWithCheckboxOnly) {
+            self.setSelection(rowItem, !rowItem.selected, evt);
+        }
         else if (!evt.keyCode || isUpDownKeyPress && !grid.config.selectWithCheckboxOnly) {
-            self.setSelection(rowItem, !rowItem.selected);
+            self.setSelection(rowItem, !rowItem.selected, evt);
         }
         self.lastClickedRow = rowItem;
         self.lastClickedRowIndex = rowItem.rowIndex;
@@ -2529,30 +2531,41 @@ var ngSelectionProvider = function (grid, $scope, $parse) {
         }
         return index;
     };
-    self.setSelection = function (rowItem, isSelected) {
-        if(grid.config.enableRowSelection){
-            if (!isSelected) {
-                var indx = self.getSelectionIndex(rowItem.entity);
-                if (indx !== -1) {
-                    self.selectedItems.splice(indx, 1);
-                }
-            }
-            else {
-                if (self.getSelectionIndex(rowItem.entity) === -1) {
-                    if (!self.multi && self.selectedItems.length > 0) {
+    self.setSelection = function(rowItem, isSelected, evt) {
+        if (grid.config.enableRowSelection) {
+            var allowMultiSelect = self.multi
+                                && ((evt && evt.ctrlKey) || (!evt))
+                                && self.selectedItems.length > 0;
+            if (grid.config.enableRowSelection) {
+                if (!isSelected) {
+                    var indx = self.getSelectionIndex(rowItem.entity);
+                    if (allowMultiSelect && indx !== -1) {
+                        self.selectedItems.splice(indx, 1);
+                    } else {
+                        var isMultipleItemsSelected = self.selectedItems.length > 1;
                         self.toggleSelectAll(false, true);
+                        if (evt.type === "click" && isMultipleItemsSelected) {
+                            self.selectedItems.push(rowItem.entity);
+                            isSelected = true;
+                        }
                     }
-                    self.selectedItems.push(rowItem.entity);
+                } else {
+                    if (self.getSelectionIndex(rowItem.entity) === -1) {
+                        if (!allowMultiSelect) {
+                            self.toggleSelectAll(false, true);
+                        }
+                        self.selectedItems.push(rowItem.entity);
+                    }
                 }
+                rowItem.selected = isSelected;
+                if (rowItem.orig) {
+                    rowItem.orig.selected = isSelected;
+                }
+                if (rowItem.clone) {
+                    rowItem.clone.selected = isSelected;
+                }
+                rowItem.afterSelectionChange(rowItem);
             }
-            rowItem.selected = isSelected;
-            if (rowItem.orig) {
-                rowItem.orig.selected = isSelected;
-            }
-            if (rowItem.clone) {
-                rowItem.clone.selected = isSelected;
-            }
-            rowItem.afterSelectionChange(rowItem);
         }
     };
     self.toggleSelectAll = function (checkAll, bypass, selectFiltered) {
