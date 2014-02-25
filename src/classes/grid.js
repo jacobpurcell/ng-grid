@@ -287,22 +287,6 @@ var ngGrid = function ($scope, options, sortService, domUtilityService, $filter,
     };
     //self funcs
     self.setRenderedRows = function (newRows) {
-        $scope.renderedRows.length = newRows.length;
-        for (var i = 0; i < newRows.length; i++) {
-            if (!$scope.renderedRows[i] || (newRows[i].isAggRow || $scope.renderedRows[i].isAggRow)) {
-                $scope.renderedRows[i] = newRows[i].copy();
-                $scope.renderedRows[i].collapsed = newRows[i].collapsed;
-                if (!newRows[i].isAggRow) {
-                    $scope.renderedRows[i].setVars(newRows[i]);
-                }
-            } else {
-                $scope.renderedRows[i].setVars(newRows[i]);
-            }
-            $scope.renderedRows[i].rowIndex = newRows[i].rowIndex;
-            $scope.renderedRows[i].offsetTop = newRows[i].offsetTop;
-            $scope.renderedRows[i].selected = newRows[i].selected;
-            newRows[i].renderedRowIndex = i;
-        }
         self.refreshDomSizes();
         $scope.$emit('ngGridEventRows', newRows);
     };
@@ -728,7 +712,6 @@ var ngGrid = function ($scope, options, sortService, domUtilityService, $filter,
     //$scope vars
     $scope.elementsNeedMeasuring = true;
     $scope.columns = [];
-    $scope.renderedRows = [];
     $scope.renderedColumns = [];
     $scope.headerRow = null;
     $scope.rowHeight = self.config.rowHeight;
@@ -806,20 +789,16 @@ var ngGrid = function ($scope, options, sortService, domUtilityService, $filter,
         }
         var rowIndex = Math.floor(scrollTop / self.config.rowHeight);
         var newRange;
-        if (self.filteredRows.length > self.config.virtualizationThreshold) {
-            // Have we hit the threshold going down?
-            if (self.prevScrollTop < scrollTop && rowIndex < self.prevScrollIndex + SCROLL_THRESHOLD) {
-                return;
-            }
-            //Have we hit the threshold going up?
-            if (self.prevScrollTop > scrollTop && rowIndex > self.prevScrollIndex - SCROLL_THRESHOLD) {
-                return;
-            }
-            newRange = new ngRange(Math.max(0, rowIndex - EXCESS_ROWS), rowIndex + self.minRowsToRender() + EXCESS_ROWS);
-        } else {
-            var maxLen = $scope.configGroups.length > 0 ? self.rowFactory.parsedData.length : self.filteredRows.length;
-            newRange = new ngRange(0, Math.max(maxLen, self.minRowsToRender() + EXCESS_ROWS));
+        // Have we hit the threshold going down?
+        if (self.prevScrollTop < scrollTop && rowIndex < self.prevScrollIndex + SCROLL_THRESHOLD) {
+            return;
         }
+        //Have we hit the threshold going up?
+        if (self.prevScrollTop > scrollTop && rowIndex > self.prevScrollIndex - SCROLL_THRESHOLD) {
+            return;
+        }
+        newRange = new ngRange(Math.max(0, rowIndex - EXCESS_ROWS), rowIndex + self.minRowsToRender() + EXCESS_ROWS);
+        
         self.prevScrollTop = scrollTop;
         self.rowFactory.UpdateViewableRange(newRange);
         self.prevScrollIndex = rowIndex;
