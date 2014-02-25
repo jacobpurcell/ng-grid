@@ -100,6 +100,7 @@ var ngMoveSelectionHandler = function($scope, elm, evt, grid) {
             r.continueSelection(evt);
             $scope.$emit('ngGridEventDigestGridParent');
 
+            // TODO: $scope.renderedRows is no longer available
             if ($scope.selectionProvider.lastClickedRow.renderedRowIndex >= $scope.renderedRows.length - EXCESS_ROWS - 2) {
                 grid.$viewport.scrollTop(grid.$viewport.scrollTop() + $scope.rowHeight);
             }
