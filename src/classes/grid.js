@@ -787,17 +787,26 @@ var ngGrid = function ($scope, options, sortService, domUtilityService, $filter,
         if (scrollTop > 0 && self.$viewport[0].scrollHeight - scrollTop <= self.$viewport.outerHeight()) {
             $scope.$emit('ngGridEventScroll');
         }
+
         var rowIndex = Math.floor(scrollTop / self.config.rowHeight);
         var newRange;
-        // Have we hit the threshold going down?
-        if (self.prevScrollTop < scrollTop && rowIndex < self.prevScrollIndex + SCROLL_THRESHOLD) {
-            return;
+
+        if (self.filteredRows.length > self.config.virtualizationThreshold) {
+            // Have we hit the threshold going down?
+            if (self.prevScrollTop < scrollTop && rowIndex < self.prevScrollIndex + SCROLL_THRESHOLD) {
+                return;
+            }
+            
+            //Have we hit the threshold going up?
+            if (self.prevScrollTop > scrollTop && rowIndex > self.prevScrollIndex - SCROLL_THRESHOLD) {
+                return;
+            }
+            
+            newRange = new ngRange(Math.max(0, rowIndex - EXCESS_ROWS), rowIndex + self.minRowsToRender() + EXCESS_ROWS);
+        } else {
+            var maxLen = $scope.configGroups.length > 0 ? self.rowFactory.parsedData.length : self.filteredRows.length;
+            newRange = new ngRange(0, Math.max(maxLen, self.minRowsToRender() + EXCESS_ROWS));
         }
-        //Have we hit the threshold going up?
-        if (self.prevScrollTop > scrollTop && rowIndex > self.prevScrollIndex - SCROLL_THRESHOLD) {
-            return;
-        }
-        newRange = new ngRange(Math.max(0, rowIndex - EXCESS_ROWS), rowIndex + self.minRowsToRender() + EXCESS_ROWS);
         
         self.prevScrollTop = scrollTop;
         self.rowFactory.UpdateViewableRange(newRange);

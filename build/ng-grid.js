@@ -2,13 +2,13 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 02/25/2014 17:24
+* Compiled At: 02/26/2014 10:39
 ***********************************************/
 (function(window, $) {
 'use strict';
 
-var EXCESS_ROWS = 6;
-var SCROLL_THRESHOLD = 4;
+var EXCESS_ROWS = 4;
+var SCROLL_THRESHOLD = 2;
 var ASC = "asc";
 
 var DESC = "desc";
@@ -1805,15 +1805,22 @@ var ngGrid = function ($scope, options, sortService, domUtilityService, $filter,
         if (scrollTop > 0 && self.$viewport[0].scrollHeight - scrollTop <= self.$viewport.outerHeight()) {
             $scope.$emit('ngGridEventScroll');
         }
+
         var rowIndex = Math.floor(scrollTop / self.config.rowHeight);
         var newRange;
-        if (self.prevScrollTop < scrollTop && rowIndex < self.prevScrollIndex + SCROLL_THRESHOLD) {
-            return;
+
+        if (self.filteredRows.length > self.config.virtualizationThreshold) {
+            if (self.prevScrollTop < scrollTop && rowIndex < self.prevScrollIndex + SCROLL_THRESHOLD) {
+                return;
+            }
+            if (self.prevScrollTop > scrollTop && rowIndex > self.prevScrollIndex - SCROLL_THRESHOLD) {
+                return;
+            }
+            newRange = new ngRange(Math.max(0, rowIndex - EXCESS_ROWS), rowIndex + self.minRowsToRender() + EXCESS_ROWS);
+        } else {
+            var maxLen = $scope.configGroups.length > 0 ? self.rowFactory.parsedData.length : self.filteredRows.length;
+            newRange = new ngRange(0, Math.max(maxLen, self.minRowsToRender() + EXCESS_ROWS));
         }
-        if (self.prevScrollTop > scrollTop && rowIndex > self.prevScrollIndex - SCROLL_THRESHOLD) {
-            return;
-        }
-        newRange = new ngRange(Math.max(0, rowIndex - EXCESS_ROWS), rowIndex + self.minRowsToRender() + EXCESS_ROWS);
         self.prevScrollTop = scrollTop;
         self.rowFactory.UpdateViewableRange(newRange);
         self.prevScrollIndex = rowIndex;
