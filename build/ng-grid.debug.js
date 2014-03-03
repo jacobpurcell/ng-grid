@@ -2,7 +2,7 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 02/26/2014 10:39
+* Compiled At: 03/03/2014 17:26
 ***********************************************/
 (function(window, $) {
 'use strict';
@@ -3193,6 +3193,16 @@ ngGridDirectives.directive('ngGrid', ['$compile', '$filter', '$templateCache', '
                     options.gridDim = new ngDimension({ outerHeight: $($element).height(), outerWidth: $($element).width() });
 
                     var grid = new ngGrid($scope, options, sortService, domUtilityService, $filter, $templateCache, $utils, $timeout, $parse, $http, $q);
+
+                    // watch for change in visibility and re-render when appropriate
+                    $scope.$watch(
+                        function () { return iElement.is(":visible"); },
+                        function (oldValue, newValue) {
+                            if (oldValue !== newValue) {
+                                domUtilityService.RebuildGrid($scope, grid);
+                                domUtilityService.digest($scope);
+                            }
+                        });
 
                     // Set up cleanup now in case something fails
                     $scope.$on('$destroy', function cleanOptions() {

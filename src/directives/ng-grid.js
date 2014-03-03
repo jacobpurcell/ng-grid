@@ -10,6 +10,16 @@
 
                     var grid = new ngGrid($scope, options, sortService, domUtilityService, $filter, $templateCache, $utils, $timeout, $parse, $http, $q);
 
+                    // watch for change in visibility and re-render when appropriate
+                    $scope.$watch(
+                        function () { return iElement.is(":visible"); },
+                        function (oldValue, newValue) {
+                            if (oldValue !== newValue) {
+                                domUtilityService.RebuildGrid($scope, grid);
+                                domUtilityService.digest($scope);
+                            }
+                        });
+
                     // Set up cleanup now in case something fails
                     $scope.$on('$destroy', function cleanOptions() {
                         options.gridDim = null;
