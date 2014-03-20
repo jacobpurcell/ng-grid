@@ -2,7 +2,7 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 03/20/2014 11:13
+* Compiled At: 03/20/2014 15:21
 ***********************************************/
 (function(window, $) {
 'use strict';
@@ -687,7 +687,7 @@ var ngColumn = function (config, $scope, grid, domUtilityService, $templateCache
     self.cellFilter = colDef.cellFilter ? colDef.cellFilter : "";
     self.field = colDef.field;
     self.aggLabelFilter = colDef.aggLabelFilter || colDef.cellFilter;
-    if (grid.persistenceId) {
+    if (grid.persistenceId && localStorage) {
         var key = 'ngGrid.columnVisibility.' + grid.persistenceId + '.' + colDef.field;
         Object.defineProperty(self, 'visible', {
             get: function () {

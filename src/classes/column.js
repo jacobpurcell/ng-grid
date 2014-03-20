@@ -31,7 +31,7 @@
     self.aggLabelFilter = colDef.aggLabelFilter || colDef.cellFilter;
 
     // store/retrieve column visibility from local-storage if the grid has a persistence id set
-    if (grid.persistenceId) {
+    if (grid.persistenceId && localStorage) {
         // create a visibility property that gets/sets its from local-storage
         var key = 'ngGrid.columnVisibility.' + grid.persistenceId + '.' + colDef.field;
         Object.defineProperty(self, 'visible', {
