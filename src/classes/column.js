@@ -29,7 +29,30 @@
     self.cellFilter = colDef.cellFilter ? colDef.cellFilter : "";
     self.field = colDef.field;
     self.aggLabelFilter = colDef.aggLabelFilter || colDef.cellFilter;
-    self.visible = $utils.isNullOrUndefined(colDef.visible) || colDef.visible;
+
+    // store/retrieve column visibility from local-storage if the grid has a persistence id set
+    if (grid.persistenceId) {
+        // create a visibility property that gets/sets its from local-storage
+        var key = 'ngGrid.columnVisibility.' + grid.persistenceId + '.' + colDef.field;
+        Object.defineProperty(self, 'visible', {
+            get: function () {
+                var isVisible = self._visible || localStorage.getItem(key);
+                return isVisible == null || isVisible === true || isVisible === "true";
+            },
+            set: function (isVisible) {
+                localStorage.setItem(key, isVisible);
+                self._visible = isVisible;
+            }
+        });
+
+        // initialize value
+        if (colDef.visible && colDef.visible != self.visible) {
+            self.visible = colDef.visible;
+        }
+    }
+    else self.visible = $utils.isNullOrUndefined(colDef.visible) || colDef.visible;
+
+
     self.sortable = false;
     self.resizable = false;
     self.pinnable = false;

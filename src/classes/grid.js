@@ -1,7 +1,7 @@
 ﻿/// <reference path="footer.js" />
 /// <reference path="../services/SortService.js" />
 /// <reference path="../../lib/jquery-1.8.2.min" />
-var ngGrid = function ($scope, options, sortService, domUtilityService, $filter, $templateCache, $utils, $timeout, $parse, $http, $q) {
+var ngGrid = function ($scope, $attrs, options, sortService, domUtilityService, $filter, $templateCache, $utils, $timeout, $parse, $http, $q) {
     var defaults = {
         //Define an aggregate template to customize the rows when grouped. See github wiki for more details.
         aggregateTemplate: undefined,
@@ -210,6 +210,7 @@ var ngGrid = function ($scope, options, sortService, domUtilityService, $filter,
     self.rowCache = [];
     self.rowMap = [];
     self.gridId = "ng" + $utils.newId();
+    self.persistenceId = $attrs.id;
     self.$root = null; //this is the root element that is passed in with the binding handler
     self.$groupPanel = null;
     self.$topPanel = null;

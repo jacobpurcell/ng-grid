@@ -2,7 +2,7 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 03/03/2014 17:26
+* Compiled At: 03/20/2014 11:13
 ***********************************************/
 (function(window, $) {
 'use strict';
@@ -741,7 +741,30 @@ var ngColumn = function (config, $scope, grid, domUtilityService, $templateCache
     self.cellFilter = colDef.cellFilter ? colDef.cellFilter : "";
     self.field = colDef.field;
     self.aggLabelFilter = colDef.aggLabelFilter || colDef.cellFilter;
-    self.visible = $utils.isNullOrUndefined(colDef.visible) || colDef.visible;
+
+    // store/retrieve column visibility from local-storage if the grid has a persistence id set
+    if (grid.persistenceId) {
+        // create a visibility property that gets/sets its from local-storage
+        var key = 'ngGrid.columnVisibility.' + grid.persistenceId + '.' + colDef.field;
+        Object.defineProperty(self, 'visible', {
+            get: function () {
+                var isVisible = self._visible || localStorage.getItem(key);
+                return isVisible == null || isVisible === true || isVisible === "true";
+            },
+            set: function (isVisible) {
+                localStorage.setItem(key, isVisible);
+                self._visible = isVisible;
+            }
+        });
+
+        // initialize value
+        if (colDef.visible && colDef.visible != self.visible) {
+            self.visible = colDef.visible;
+        }
+    }
+    else self.visible = $utils.isNullOrUndefined(colDef.visible) || colDef.visible;
+
+
     self.sortable = false;
     self.resizable = false;
     self.pinnable = false;
@@ -1294,7 +1317,7 @@ var ngFooter = function ($scope, grid) {
 /// <reference path="footer.js" />
 /// <reference path="../services/SortService.js" />
 /// <reference path="../../lib/jquery-1.8.2.min" />
-var ngGrid = function ($scope, options, sortService, domUtilityService, $filter, $templateCache, $utils, $timeout, $parse, $http, $q) {
+var ngGrid = function ($scope, $attrs, options, sortService, domUtilityService, $filter, $templateCache, $utils, $timeout, $parse, $http, $q) {
     var defaults = {
         //Define an aggregate template to customize the rows when grouped. See github wiki for more details.
         aggregateTemplate: undefined,
@@ -1503,6 +1526,7 @@ var ngGrid = function ($scope, options, sortService, domUtilityService, $filter,
     self.rowCache = [];
     self.rowMap = [];
     self.gridId = "ng" + $utils.newId();
+    self.persistenceId = $attrs.id;
     self.$root = null; //this is the root element that is passed in with the binding handler
     self.$groupPanel = null;
     self.$topPanel = null;
@@ -3192,7 +3216,7 @@ ngGridDirectives.directive('ngGrid', ['$compile', '$filter', '$templateCache', '
                     var options = $scope.$eval(iAttrs.ngGrid);
                     options.gridDim = new ngDimension({ outerHeight: $($element).height(), outerWidth: $($element).width() });
 
-                    var grid = new ngGrid($scope, options, sortService, domUtilityService, $filter, $templateCache, $utils, $timeout, $parse, $http, $q);
+                    var grid = new ngGrid($scope, iAttrs, options, sortService, domUtilityService, $filter, $templateCache, $utils, $timeout, $parse, $http, $q);
 
                     // watch for change in visibility and re-render when appropriate
                     $scope.$watch(

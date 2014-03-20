@@ -8,7 +8,7 @@
                     var options = $scope.$eval(iAttrs.ngGrid);
                     options.gridDim = new ngDimension({ outerHeight: $($element).height(), outerWidth: $($element).width() });
 
-                    var grid = new ngGrid($scope, options, sortService, domUtilityService, $filter, $templateCache, $utils, $timeout, $parse, $http, $q);
+                    var grid = new ngGrid($scope, iAttrs, options, sortService, domUtilityService, $filter, $templateCache, $utils, $timeout, $parse, $http, $q);
 
                     // watch for change in visibility and re-render when appropriate
                     $scope.$watch(
