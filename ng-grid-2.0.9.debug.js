@@ -2,7 +2,7 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 03/21/2014 13:11
+* Compiled At: 03/21/2014 15:50
 ***********************************************/
 (function(window, $) {
 'use strict';
@@ -554,11 +554,14 @@ angular.module('ngGrid.services').factory('$utilityService', ['$parse', function
             var elem = document.getElementById('tempDataLengthProvider');
             
             var $node = $(node);
-            // TODO: copy over entire node as template may have non text elements that affect its width
-            $(elem).css({'font': $node.css('font'),
-                        'font-size': $node.css('font-size'),
-                        'font-family': $node.css('font-family')});
-            elem.innerHTML = $node.text();
+            elem.innerHTML = $node[0].outerHTML;
+
+            // remove colt classes when calculating dynamic width, as they enforce a set width
+            var classesToRemove = elem.children[0].className.match('colt.');
+            angular.forEach(classesToRemove, function (classToRemove) {
+                elem.children[0].className = elem.children[0].className.replace(classToRemove, '');
+            });
+
             var width = elem.offsetWidth;
 
             return width;
