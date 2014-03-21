@@ -2,7 +2,7 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 03/20/2014 15:21
+* Compiled At: 03/21/2014 11:43
 ***********************************************/
 (function(window, $) {
 'use strict';
@@ -1059,7 +1059,7 @@ var ngEventProvider = function (grid, $scope, domUtilityService, $timeout) {
 
                         angular.element(col).on('$destroy', function() {
                             angular.element(col).off('dragstart', self.dragStart);
-                            col.removeEventListener(self.dragStart);
+                            col.removeEventListener('dragstart', self.dragStart);
                         });
                     }
                 }
