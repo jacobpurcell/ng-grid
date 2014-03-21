@@ -2,7 +2,7 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 03/21/2014 11:43
+* Compiled At: 03/21/2014 13:11
 ***********************************************/
 (function(window, $) {
 'use strict';
@@ -551,20 +551,16 @@ angular.module('ngGrid.services').factory('$utilityService', ['$parse', function
     var funcNameRegex = /function (.{1,})\(/;
     var utils = {
         visualLength: function(node) {
-            var elem = document.getElementById('testDataLength');
-            if (!elem) {
-                elem = document.createElement('SPAN');
-                elem.id = "testDataLength";
-                elem.style.visibility = "hidden";
-                document.body.appendChild(elem);
-            }
+            var elem = document.getElementById('tempDataLengthProvider');
+            
             var $node = $(node);
+            // TODO: copy over entire node as template may have non text elements that affect its width
             $(elem).css({'font': $node.css('font'),
                         'font-size': $node.css('font-size'),
                         'font-family': $node.css('font-family')});
             elem.innerHTML = $node.text();
             var width = elem.offsetWidth;
-            document.body.removeChild(elem);
+
             return width;
         },
         forIn: function(obj, action) {
@@ -4019,6 +4015,12 @@ angular.module('ngGrid').run(['$templateCache', function($templateCache) {
     "</div>\r" +
     "\n" +
     "<div ng-grid-footer></div>\r" +
+    "\n" +
+    "\r" +
+    "\n" +
+    "<!-- used for calculating the size of columns when auto-resizing -->\r" +
+    "\n" +
+    "<span id=\"tempDataLengthProvider\" style=\"visibility: hidden;\"></span>\r" +
     "\n"
   );
 
