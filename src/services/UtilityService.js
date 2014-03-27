@@ -1,4 +1,4 @@
-﻿angular.module('ngGrid.services').factory('$utilityService', ['$parse', function ($parse) {
+angular.module('ngGrid.services').factory('$utilityService', ['$parse', function ($parse) {
     var funcNameRegex = /function (.{1,})\(/;
     var utils = {
         visualLength: function(node) {
@@ -39,14 +39,16 @@
             }
             return false;
         },
-        getElementsByClassName: function(cl) {
-            if (document.getElementsByClassName) {
-                return document.getElementsByClassName(cl);
+        getElementsByClassName: function(cl, el) {
+            var root = el || document;
+
+            if (root.getElementsByClassName) {
+                return root.getElementsByClassName(cl);
             }
             else {
                 var retnode = [];
                 var myclass = new RegExp('\\b' + cl + '\\b');
-                var elem = document.getElementsByTagName('*');
+                var elem = root.getElementsByTagName('*');
                 for (var i = 0; i < elem.length; i++) {
                     var classes = elem[i].className;
                     if (myclass.test(classes)) {

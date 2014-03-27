@@ -2,7 +2,7 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 03/27/2014 13:34
+* Compiled At: 03/27/2014 14:07
 ***********************************************/
 (function(window, $) {
 'use strict';
@@ -588,14 +588,16 @@ angular.module('ngGrid.services').factory('$utilityService', ['$parse', function
             }
             return false;
         },
-        getElementsByClassName: function(cl) {
-            if (document.getElementsByClassName) {
-                return document.getElementsByClassName(cl);
+        getElementsByClassName: function(cl, el) {
+            var root = el || document;
+
+            if (root.getElementsByClassName) {
+                return root.getElementsByClassName(cl);
             }
             else {
                 var retnode = [];
                 var myclass = new RegExp('\\b' + cl + '\\b');
-                var elem = document.getElementsByTagName('*');
+                var elem = root.getElementsByTagName('*');
                 for (var i = 0; i < elem.length; i++) {
                     var classes = elem[i].className;
                     if (myclass.test(classes)) {
@@ -842,7 +844,7 @@ var ngColumn = function (config, $scope, grid, domUtilityService, $templateCache
         config.sortCallback(self, evt);
         return false;
     };
-    self.gripClick = function() {
+    self.gripClick = function(event) {
         clicks++; //count clicks
         if (clicks === 1) {
             timer = setTimeout(function() {
@@ -851,7 +853,7 @@ var ngColumn = function (config, $scope, grid, domUtilityService, $templateCache
             }, delay);
         } else {
             clearTimeout(timer); //prevent single-click action
-            config.resizeOnDataCallback(self); //perform double-click action
+            config.resizeOnDataCallback(self, $(event.target).closest(".ngGrid")[0]); //perform double-click action
             clicks = 0; //after action performed, reset counter
         }
     };
@@ -1744,8 +1746,8 @@ var ngGrid = function ($scope, $attrs, options, sortService, domUtilityService, 
                     totalWidth += ngColumn.width;
                     var temp = ngColumn;
 
-                    $scope.$on('$destroy', $scope.$on("ngGridEventData", function () {
-                        self.resizeOnData(temp);
+                    $scope.$on('$destroy', $scope.$on("ngGridEventData", function (event) {
+                        self.resizeOnData(temp, $(event.target).closest(".ngGrid")[0]);
                     }));
 
                     return;
@@ -1887,10 +1889,10 @@ var ngGrid = function ($scope, $attrs, options, sortService, domUtilityService, 
         // return p.promise;
     };
    
-    self.resizeOnData = function(col) {
+    self.resizeOnData = function(col, grid) {
         // we calculate the longest data.
         var longest = col.minWidth;
-        var arr = $utils.getElementsByClassName('col' + col.index);
+        var arr = $utils.getElementsByClassName('col' + col.index, grid);
         angular.forEach(arr, function(elem, index) {
             var i;
             if (index === 0) {

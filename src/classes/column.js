@@ -1,4 +1,4 @@
-﻿var ngColumn = function (config, $scope, grid, domUtilityService, $templateCache, $utils) {
+var ngColumn = function (config, $scope, grid, domUtilityService, $templateCache, $utils) {
     var self = this,
         colDef = config.colDef,
         delay = 500,
@@ -131,7 +131,7 @@
         config.sortCallback(self, evt);
         return false;
     };
-    self.gripClick = function() {
+    self.gripClick = function(event) {
         clicks++; //count clicks
         if (clicks === 1) {
             timer = setTimeout(function() {
@@ -140,7 +140,7 @@
             }, delay);
         } else {
             clearTimeout(timer); //prevent single-click action
-            config.resizeOnDataCallback(self); //perform double-click action
+            config.resizeOnDataCallback(self, $(event.target).closest(".ngGrid")[0]); //perform double-click action
             clicks = 0; //after action performed, reset counter
         }
     };

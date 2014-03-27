@@ -1,4 +1,4 @@
-﻿/// <reference path="footer.js" />
+/// <reference path="footer.js" />
 /// <reference path="../services/SortService.js" />
 /// <reference path="../../lib/jquery-1.8.2.min" />
 var ngGrid = function ($scope, $attrs, options, sortService, domUtilityService, $filter, $templateCache, $utils, $timeout, $parse, $http, $q) {
@@ -429,8 +429,8 @@ var ngGrid = function ($scope, $attrs, options, sortService, domUtilityService, 
                     totalWidth += ngColumn.width;
                     var temp = ngColumn;
 
-                    $scope.$on('$destroy', $scope.$on("ngGridEventData", function () {
-                        self.resizeOnData(temp);
+                    $scope.$on('$destroy', $scope.$on("ngGridEventData", function (event) {
+                        self.resizeOnData(temp, $(event.target).closest(".ngGrid")[0]);
                     }));
 
                     return;
@@ -572,10 +572,10 @@ var ngGrid = function ($scope, $attrs, options, sortService, domUtilityService, 
         // return p.promise;
     };
    
-    self.resizeOnData = function(col) {
+    self.resizeOnData = function(col, grid) {
         // we calculate the longest data.
         var longest = col.minWidth;
-        var arr = $utils.getElementsByClassName('col' + col.index);
+        var arr = $utils.getElementsByClassName('col' + col.index, grid);
         angular.forEach(arr, function(elem, index) {
             var i;
             if (index === 0) {
