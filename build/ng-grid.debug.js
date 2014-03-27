@@ -2,7 +2,7 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 03/27/2014 12:12
+* Compiled At: 03/27/2014 13:34
 ***********************************************/
 (function(window, $) {
 'use strict';
@@ -3627,9 +3627,10 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                 }
             }
 
-            function removeHtmlRowFromDom($row) {
-                angular.element($row).scope().$destroy();
-                $($row).remove();
+            function removeHtmlRowFromDom(row) {
+                var $row = angular.element(row);
+                $row.scope().$destroy();
+                $row.remove();
             }
 
             if (newRowsToRender.length) {

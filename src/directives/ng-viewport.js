@@ -79,9 +79,10 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                 }
             }
 
-            function removeHtmlRowFromDom($row) {
-                angular.element($row).scope().$destroy();
-                $($row).remove();
+            function removeHtmlRowFromDom(row) {
+                var $row = angular.element(row);
+                $row.scope().$destroy();
+                $row.remove();
             }
 
             if (newRowsToRender.length) {
