@@ -2,7 +2,7 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 04/09/2014 13:02
+* Compiled At: 04/09/2014 13:10
 ***********************************************/
 (function(window, $) {
 'use strict';
@@ -1895,11 +1895,13 @@ var ngGrid = function ($scope, $attrs, options, sortService, domUtilityService, 
         var arr = $utils.getElementsByClassName('col' + col.index, grid);
         angular.forEach(arr, function(elem, index) {
             var i;
+            var $elem = $(elem);
+
             if (index === 0) {
-                var kgHeaderText = $(elem).find('.ngHeaderText');
+                var kgHeaderText = $elem.find('.ngHeaderText');
                 i = $utils.visualLength(kgHeaderText) + 10; // +10 some margin
             } else {
-                var ngCellText = $(elem).find('.ngCellText');
+                var ngCellText = $elem.hasClass('ngCellText') ? $elem : $elem.find('.ngCellText');
                 i = $utils.visualLength(ngCellText) + 10; // +10 some margin
             }
             if (i > longest) {

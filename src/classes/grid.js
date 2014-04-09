@@ -578,11 +578,13 @@ var ngGrid = function ($scope, $attrs, options, sortService, domUtilityService, 
         var arr = $utils.getElementsByClassName('col' + col.index, grid);
         angular.forEach(arr, function(elem, index) {
             var i;
+            var $elem = $(elem);
+
             if (index === 0) {
-                var kgHeaderText = $(elem).find('.ngHeaderText');
+                var kgHeaderText = $elem.find('.ngHeaderText');
                 i = $utils.visualLength(kgHeaderText) + 10; // +10 some margin
             } else {
-                var ngCellText = $(elem).find('.ngCellText');
+                var ngCellText = $elem.hasClass('ngCellText') ? $elem : $elem.find('.ngCellText');
                 i = $utils.visualLength(ngCellText) + 10; // +10 some margin
             }
             if (i > longest) {
