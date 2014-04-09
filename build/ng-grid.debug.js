@@ -2,7 +2,7 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 03/27/2014 14:07
+* Compiled At: 04/09/2014 13:02
 ***********************************************/
 (function(window, $) {
 'use strict';
@@ -557,7 +557,7 @@ angular.module('ngGrid.services').factory('$utilityService', ['$parse', function
             elem.innerHTML = $node[0].outerHTML;
 
             // remove colt classes when calculating dynamic width, as they enforce a set width
-            var classesToRemove = elem.children[0].className.match('colt.');
+            var classesToRemove = elem.children[0].className.match('col.*');
             angular.forEach(classesToRemove, function (classToRemove) {
                 elem.children[0].className = elem.children[0].className.replace(classToRemove, '');
             });

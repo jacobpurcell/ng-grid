@@ -8,7 +8,7 @@ angular.module('ngGrid.services').factory('$utilityService', ['$parse', function
             elem.innerHTML = $node[0].outerHTML;
 
             // remove colt classes when calculating dynamic width, as they enforce a set width
-            var classesToRemove = elem.children[0].className.match('colt.');
+            var classesToRemove = elem.children[0].className.match('col.*');
             angular.forEach(classesToRemove, function (classToRemove) {
                 elem.children[0].className = elem.children[0].className.replace(classToRemove, '');
             });
