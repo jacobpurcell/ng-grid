@@ -27,7 +27,7 @@
                 },
                 post: function($scope, iElement) {
                     if ($scope.enableCellSelection) {
-                        $scope.domAccessProvider.selectionHandlers($scope, iElement);
+                        $scope.domAccessProvider.selectionHandlers($scope, iElement, domUtilityService);
                     }
                     
                     $scope.$on('$destroy', $scope.$on('ngGridEventDigestCell', function() {

@@ -1,5 +1,5 @@
 //set event binding on the grid so we can select using the up/down keys
-var ngMoveSelectionHandler = function($scope, elm, evt, grid) {
+var ngMoveSelectionHandler = function($scope, elm, evt, grid, domUtilityService) {
     if ($scope.selectionProvider.selectedItems === undefined) {
         return true;
     }
@@ -95,16 +95,17 @@ var ngMoveSelectionHandler = function($scope, elm, evt, grid) {
     }
     
     if (offset) {
-        var r = items[rowIndex + offset];
-        if (r.beforeSelectionChange(r, evt)) {
-            r.continueSelection(evt);
-            $scope.$emit('ngGridEventDigestGridParent');
+        var currentlySelectedRow = items[rowIndex];
+        var rowToSelect = items[rowIndex + offset];
+        if (rowToSelect.beforeSelectionChange(rowToSelect, evt)) {
+            rowToSelect.continueSelection(evt);
+            domUtilityService.digest(currentlySelectedRow.elm.scope());
+            domUtilityService.digest(rowToSelect.elm.scope());
 
-            // TODO: $scope.renderedRows is no longer available
-            if ($scope.selectionProvider.lastClickedRow.renderedRowIndex >= $scope.renderedRows.length - EXCESS_ROWS - 2) {
+            if ($scope.selectionProvider.lastClickedRow.rowIndex >= grid.rowFactory.renderedRange.bottomRow - EXCESS_ROWS - 2) {
                 grid.$viewport.scrollTop(grid.$viewport.scrollTop() + $scope.rowHeight);
             }
-            else if ($scope.selectionProvider.lastClickedRow.renderedRowIndex <= EXCESS_ROWS + 2) {
+            else if ($scope.selectionProvider.lastClickedRow.rowIndex <= grid.rowFactory.renderedRange.topRow + EXCESS_ROWS + 2) {
                 grid.$viewport.scrollTop(grid.$viewport.scrollTop() - $scope.rowHeight);
             }
       }

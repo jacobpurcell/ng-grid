@@ -172,7 +172,7 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
         });
 
         if (!$scope.enableCellSelection) {
-            $scope.domAccessProvider.selectionHandlers($scope, elm);
+            $scope.domAccessProvider.selectionHandlers($scope, elm, domUtilityService);
         }
     };
 }]);
