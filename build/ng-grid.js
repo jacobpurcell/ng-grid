@@ -2,7 +2,7 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 04/09/2014 13:10
+* Compiled At: 05/08/2014 17:45
 ***********************************************/
 (function(window, $) {
 'use strict';
@@ -31,7 +31,7 @@ var ngGridFilters = angular.module('ngGrid.filters', []);
 
 angular.module('ngGrid', ['ngGrid.services', 'ngGrid.directives', 'ngGrid.filters']);
 
-var ngMoveSelectionHandler = function($scope, elm, evt, grid) {
+var ngMoveSelectionHandler = function($scope, elm, evt, grid, domUtilityService) {
     if ($scope.selectionProvider.selectedItems === undefined) {
         return true;
     }
@@ -121,14 +121,17 @@ var ngMoveSelectionHandler = function($scope, elm, evt, grid) {
         offset = 1;
     }
     if (offset) {
-        var r = items[rowIndex + offset];
-        if (r.beforeSelectionChange(r, evt)) {
-            r.continueSelection(evt);
-            $scope.$emit('ngGridEventDigestGridParent');
-            if ($scope.selectionProvider.lastClickedRow.renderedRowIndex >= $scope.renderedRows.length - EXCESS_ROWS - 2) {
+        var currentlySelectedRow = items[rowIndex];
+        var rowToSelect = items[rowIndex + offset];
+        if (rowToSelect.beforeSelectionChange(rowToSelect, evt)) {
+            rowToSelect.continueSelection(evt);
+            domUtilityService.digest(currentlySelectedRow.elm.scope());
+            domUtilityService.digest(rowToSelect.elm.scope());
+
+            if ($scope.selectionProvider.lastClickedRow.rowIndex >= grid.rowFactory.renderedRange.bottomRow - EXCESS_ROWS - 2) {
                 grid.$viewport.scrollTop(grid.$viewport.scrollTop() + $scope.rowHeight);
             }
-            else if ($scope.selectionProvider.lastClickedRow.renderedRowIndex <= EXCESS_ROWS + 2) {
+            else if ($scope.selectionProvider.lastClickedRow.rowIndex <= grid.rowFactory.renderedRange.topRow + EXCESS_ROWS + 2) {
                 grid.$viewport.scrollTop(grid.$viewport.scrollTop() - $scope.rowHeight);
             }
       }
@@ -893,7 +896,7 @@ ngDomAccessProvider.prototype.focusCellElement = function ($scope, index) {
         }
     }
 };
-ngDomAccessProvider.prototype.selectionHandlers = function ($scope, elm) {
+ngDomAccessProvider.prototype.selectionHandlers = function ($scope, elm, domUtilityService) {
     var doingKeyDown = false;
     var self = this;
 
@@ -903,7 +906,7 @@ ngDomAccessProvider.prototype.selectionHandlers = function ($scope, elm) {
             return true;
         } else if (!doingKeyDown) {
             doingKeyDown = true;
-            var ret = ngMoveSelectionHandler($scope, elm, evt, self.grid);
+            var ret = ngMoveSelectionHandler($scope, elm, evt, self.grid, domUtilityService);
             doingKeyDown = false;
             return ret;
         }
@@ -2785,7 +2788,7 @@ ngGridDirectives.directive('ngCell', ['$compile', '$domUtilityService', function
                 },
                 post: function($scope, iElement) {
                     if ($scope.enableCellSelection) {
-                        $scope.domAccessProvider.selectionHandlers($scope, iElement);
+                        $scope.domAccessProvider.selectionHandlers($scope, iElement, domUtilityService);
                     }
                     $scope.$on('$destroy', $scope.$on('ngGridEventDigestCell', function() {
                         domUtilityService.digest($scope);
@@ -3171,10 +3174,10 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
 
         var canvas = $('.ngCanvas', elm);
         var template = "<div row-id='{{ row.rowIndex }}' ng-style=\"rowStyle(row)\" ng-click=\"row.toggleSelected($event)\" ng-class=\"row.alternatingRowClass()\" ng-row></div>\r";
-        var prevRowsToRenderLookup = [];
+        var currentlyRenderRowsLookup = [];
 
         $scope.$on('ngGridEventRows', function (ctx, rowsToRender) {
-            var prevRowsToRenderLength = prevRowsToRenderLookup && Object.keys(prevRowsToRenderLookup).length || 0;
+            var currentlyRenderedRowsLength = currentlyRenderRowsLookup && Object.keys(currentlyRenderRowsLookup).length || 0;
 
             var rowsToRenderLookup = []; 
             var rowsToReplace = []; 
@@ -3182,18 +3185,18 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
             rowsToRender.forEach(function (row) {
                 rowsToRenderLookup[row.rowIndex] = row;
 
-                var previouslyRenderedRow = prevRowsToRenderLookup[row.rowIndex];
+                var currentlyRenderedRow = currentlyRenderRowsLookup[row.rowIndex];
 
-                if (!previouslyRenderedRow) { 
+                if (!currentlyRenderedRow) { 
                     newRowsToRender.push(row);
                 }
-                else if (previouslyRenderedRow.entity !== row.entity || previouslyRenderedRow.offsetTop !== row.offsetTop) {
+                else if (currentlyRenderedRow.entity !== row.entity || currentlyRenderedRow.offsetTop !== row.offsetTop) {
                     rowsToReplace[row.rowIndex] = true;
                 }
             });
 
-            var rowsAlreadyRendered = prevRowsToRenderLookup
-                && rowsToRender.length == prevRowsToRenderLength
+            var rowsAlreadyRendered = currentlyRenderRowsLookup
+                && rowsToRender.length == currentlyRenderedRowsLength
                 && rowsToReplace.length === 0
                 && newRowsToRender.length === 0;
 
@@ -3208,10 +3211,12 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                 if (rowsToReplace[indexOfRenderedRow]) {
                     var scopeOfRowToReplace = angular.element(renderedRow).scope();
                     scopeOfRowToReplace.row = rowsToRenderLookup[indexOfRenderedRow];
+                    scopeOfRowToReplace.row.elm = $(renderedRow);
+
                     domUtilityService.digest(scopeOfRowToReplace);
                 }
             });
-            if (prevRowsToRenderLength > rowsToRender.length) {
+            if (currentlyRenderedRowsLength > rowsToRender.length) {
                 removeExcessHtmlRows();
             }
 
@@ -3244,33 +3249,35 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
             if (newRowsToRender.length) {
                 var allRows = $('[ng-row]', canvas);
 
-                newRowsToRender.forEach(function (row) {
+                newRowsToRender.forEach(function (rowToRender) {
 
                     if (allRows.length >= rowsToRender.length) {
                         var sortedRows = _(allRows) 
                             .sortBy(function (r) {
                                 return Number(r.attributes['row-id'].value); 
                             });
-                        var previouslyRenderedRowIdxs = Object.keys(prevRowsToRenderLookup);
-                        var rowToReuse = row.rowIndex > previouslyRenderedRowIdxs[previouslyRenderedRowIdxs.length - 1]
+                        var currentlyRenderedRowIdxs = Object.keys(currentlyRenderRowsLookup);
+                        var rowToReuse = rowToRender.rowIndex > currentlyRenderedRowIdxs[currentlyRenderedRowIdxs.length - 1]
                                        ? sortedRows[0]
                                        : sortedRows[sortedRows.length - 1];
                         var scopeOfRowToReuse = angular.element(rowToReuse).scope();
-                        scopeOfRowToReuse.row = row;
+                        rowToRender.elm = $(rowToReuse);
+                        scopeOfRowToReuse.row = rowToRender;
                         domUtilityService.digest(scopeOfRowToReuse);
                     }
                     else {
                         var scopeOfRowToAdd = $scope.$new(false);
-                        scopeOfRowToAdd.row = row;
+                        scopeOfRowToAdd.row = rowToRender;
                         var compiledRow = $compile(template)(scopeOfRowToAdd);
                         canvas.append(compiledRow);
+                        scopeOfRowToAdd.row.elm = compiledRow;
                         domUtilityService.digest(scopeOfRowToAdd);
                         allRows.push(compiledRow[0]);
                     }
                 });
             }
 
-            prevRowsToRenderLookup = rowsToRenderLookup;
+            currentlyRenderRowsLookup = rowsToRenderLookup;
         });
 
         var delayRenderingTimer;
@@ -3317,7 +3324,7 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
         });
 
         if (!$scope.enableCellSelection) {
-            $scope.domAccessProvider.selectionHandlers($scope, elm);
+            $scope.domAccessProvider.selectionHandlers($scope, elm, domUtilityService);
         }
     };
 }]);
