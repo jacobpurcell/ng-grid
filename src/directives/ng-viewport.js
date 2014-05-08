@@ -6,10 +6,10 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
 
         var canvas = $('.ngCanvas', elm);
         var template = "<div row-id='{{ row.rowIndex }}' ng-style=\"rowStyle(row)\" ng-click=\"row.toggleSelected($event)\" ng-class=\"row.alternatingRowClass()\" ng-row></div>\r";
-        var prevRowsToRenderLookup = [];
+        var currentlyRenderRowsLookup = [];
 
         $scope.$on('ngGridEventRows', function (ctx, rowsToRender) {
-            var prevRowsToRenderLength = prevRowsToRenderLookup && Object.keys(prevRowsToRenderLookup).length || 0;
+            var currentlyRenderedRowsLength = currentlyRenderRowsLookup && Object.keys(currentlyRenderRowsLookup).length || 0;
 
             var rowsToRenderLookup = []; // array of row-data, indexed by row id
             var rowsToReplace = []; // array of Booleans, indexed by row id
@@ -18,20 +18,20 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                 // keep track of rows that will be rendered and their associated data
                 rowsToRenderLookup[row.rowIndex] = row;
 
-                var previouslyRenderedRow = prevRowsToRenderLookup[row.rowIndex];
+                var currentlyRenderedRow = currentlyRenderRowsLookup[row.rowIndex];
 
-                if (!previouslyRenderedRow) { // if row not currently rendered, then render it.
+                if (!currentlyRenderedRow) { // if row not currently rendered, then render it.
                     newRowsToRender.push(row);
                 }
-                else if (previouslyRenderedRow.entity !== row.entity || previouslyRenderedRow.offsetTop !== row.offsetTop) {
+                else if (currentlyRenderedRow.entity !== row.entity || currentlyRenderedRow.offsetTop !== row.offsetTop) {
                     // looking for rows that have already been rendered, but whose associated data, or position in the DOM, has changed.
                     // Note: this can happen when filtering (the indexes of rows are changed), and probably happens when grouping columns
                     rowsToReplace[row.rowIndex] = true;
                 }
             });
 
-            var rowsAlreadyRendered = prevRowsToRenderLookup
-                && rowsToRender.length == prevRowsToRenderLength
+            var rowsAlreadyRendered = currentlyRenderRowsLookup
+                && rowsToRender.length == currentlyRenderedRowsLength
                 && rowsToReplace.length === 0
                 && newRowsToRender.length === 0;
 
@@ -48,12 +48,14 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                 if (rowsToReplace[indexOfRenderedRow]) {
                     var scopeOfRowToReplace = angular.element(renderedRow).scope();
                     scopeOfRowToReplace.row = rowsToRenderLookup[indexOfRenderedRow];
+                    scopeOfRowToReplace.row.elm = $(renderedRow);
+
                     domUtilityService.digest(scopeOfRowToReplace);
                 }
             });
 
 
-            if (prevRowsToRenderLength > rowsToRender.length) {
+            if (currentlyRenderedRowsLength > rowsToRender.length) {
                 removeExcessHtmlRows();
             }
 
@@ -88,7 +90,7 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
             if (newRowsToRender.length) {
                 var allRows = $('[ng-row]', canvas);
 
-                newRowsToRender.forEach(function (row) {
+                newRowsToRender.forEach(function (rowToRender) {
 
                     if (allRows.length >= rowsToRender.length) { // reuse html rows when there are enough of them in the dom
 
@@ -100,26 +102,28 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                             });
 
                         // if scrolling down re-use the first row, otherwise use the last
-                        var previouslyRenderedRowIdxs = Object.keys(prevRowsToRenderLookup);
-                        var rowToReuse = row.rowIndex > previouslyRenderedRowIdxs[previouslyRenderedRowIdxs.length - 1]
+                        var currentlyRenderedRowIdxs = Object.keys(currentlyRenderRowsLookup);
+                        var rowToReuse = rowToRender.rowIndex > currentlyRenderedRowIdxs[currentlyRenderedRowIdxs.length - 1]
                                        ? sortedRows[0]
                                        : sortedRows[sortedRows.length - 1];
                         var scopeOfRowToReuse = angular.element(rowToReuse).scope();
-                        scopeOfRowToReuse.row = row;
+                        rowToRender.elm = $(rowToReuse);
+                        scopeOfRowToReuse.row = rowToRender;
                         domUtilityService.digest(scopeOfRowToReuse);
                     }
                     else {
                         var scopeOfRowToAdd = $scope.$new(false);
-                        scopeOfRowToAdd.row = row;
+                        scopeOfRowToAdd.row = rowToRender;
                         var compiledRow = $compile(template)(scopeOfRowToAdd);
                         canvas.append(compiledRow);
+                        scopeOfRowToAdd.row.elm = compiledRow;
                         domUtilityService.digest(scopeOfRowToAdd);
                         allRows.push(compiledRow[0]);
                     }
                 });
             }
 
-            prevRowsToRenderLookup = rowsToRenderLookup;
+            currentlyRenderRowsLookup = rowsToRenderLookup;
         });
 
         var delayRenderingTimer;
