@@ -6,10 +6,10 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
 
         var canvas = $('.ngCanvas', elm);
         var template = "<div row-id='{{ row.rowIndex }}' ng-style=\"rowStyle(row)\" ng-click=\"row.toggleSelected($event)\" ng-class=\"row.alternatingRowClass()\" ng-row></div>\r";
-        var currentlyRenderRowsLookup = [];
+        var currentlyRenderedRowsLookup = [];
 
         $scope.$on('ngGridEventRows', function (ctx, rowsToRender) {
-            var currentlyRenderedRowsLength = currentlyRenderRowsLookup && Object.keys(currentlyRenderRowsLookup).length || 0;
+            var currentlyRenderedRowsLength = currentlyRenderedRowsLookup && Object.keys(currentlyRenderedRowsLookup).length || 0;
 
             var rowsToRenderLookup = []; // array of row-data, indexed by row id
             var rowsToReplace = []; // array of Booleans, indexed by row id
@@ -18,7 +18,7 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                 // keep track of rows that will be rendered and their associated data
                 rowsToRenderLookup[row.rowIndex] = row;
 
-                var currentlyRenderedRow = currentlyRenderRowsLookup[row.rowIndex];
+                var currentlyRenderedRow = currentlyRenderedRowsLookup[row.rowIndex];
 
                 if (!currentlyRenderedRow) { // if row not currently rendered, then render it.
                     newRowsToRender.push(row);
@@ -30,7 +30,7 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                 }
             });
 
-            var rowsAlreadyRendered = currentlyRenderRowsLookup
+            var rowsAlreadyRendered = currentlyRenderedRowsLookup
                 && rowsToRender.length == currentlyRenderedRowsLength
                 && rowsToReplace.length === 0
                 && newRowsToRender.length === 0;
@@ -102,7 +102,7 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                             });
 
                         // if scrolling down re-use the first row, otherwise use the last
-                        var currentlyRenderedRowIdxs = Object.keys(currentlyRenderRowsLookup);
+                        var currentlyRenderedRowIdxs = Object.keys(currentlyRenderedRowsLookup);
                         var rowToReuse = rowToRender.rowIndex > currentlyRenderedRowIdxs[currentlyRenderedRowIdxs.length - 1]
                                        ? sortedRows[0]
                                        : sortedRows[sortedRows.length - 1];
@@ -123,7 +123,7 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                 });
             }
 
-            currentlyRenderRowsLookup = rowsToRenderLookup;
+            currentlyRenderedRowsLookup = rowsToRenderLookup;
         });
 
         var delayRenderingTimer;
