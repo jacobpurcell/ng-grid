@@ -2,7 +2,7 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 05/09/2014 14:08
+* Compiled At: 05/13/2014 12:46
 ***********************************************/
 (function(window, $) {
 'use strict';
@@ -1555,8 +1555,9 @@ var ngGrid = function ($scope, $attrs, options, sortService, domUtilityService, 
             }
             var asteriskVal = Math.floor(remainingWidth / asteriskNum);
             angular.forEach(asterisksArray, function(colDef, i) {
-                var ngColumn = $scope.columns[indexMap[colDef.index]];
-                ngColumn.width = asteriskVal * colDef.width.length;
+                var ngColumn = $scope.columns[indexMap[colDef.index]],
+                    minWidth = ngColumn.minWidth || 0;
+                ngColumn.width = Math.max(minWidth, asteriskVal * colDef.width.length);
                 if (ngColumn.visible !== false) {
                     totalWidth += ngColumn.width;
                 }
@@ -3247,21 +3248,18 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
             }
 
             if (newRowsToRender.length) {
-                var allRows = $('[ng-row]', canvas);
-
                 newRowsToRender.forEach(function (rowToRender) {
 
-                    if (allRows.length >= rowsToRender.length) {
-                        var sortedRows = _(allRows) 
-                            .sortBy(function (r) {
-                                return Number(r.attributes['row-id'].value); 
-                            });
-                        var currentlyRenderedRowIdxs = Object.keys(currentlyRenderedRowsLookup);
-                        var rowToReuse = rowToRender.rowIndex > currentlyRenderedRowIdxs[currentlyRenderedRowIdxs.length - 1]
-                                       ? sortedRows[0]
-                                       : sortedRows[sortedRows.length - 1];
-                        var scopeOfRowToReuse = angular.element(rowToReuse).scope();
-                        rowToRender.elm = $(rowToReuse);
+                    if (allHtmlRows.length >= rowsToRender.length) {
+                        var currentlyRenderedRowIdxsInOrder = Object.keys(currentlyRenderedRowsLookup);
+                        var lastRowIdx = currentlyRenderedRowIdxsInOrder[currentlyRenderedRowIdxsInOrder.length - 1];
+                        var rowToReuse = rowToRender.rowIndex > lastRowIdx
+                                       ? currentlyRenderedRowsLookup[currentlyRenderedRowIdxsInOrder[0]]
+                                       : currentlyRenderedRowsLookup[lastRowIdx];
+                        delete currentlyRenderedRowsLookup[rowToReuse.rowIndex];
+                        currentlyRenderedRowsLookup[rowToRender.rowIndex] = rowToRender;
+                        var scopeOfRowToReuse = angular.element(rowToReuse.elm).scope();
+                        rowToRender.elm = rowToReuse.elm;
                         scopeOfRowToReuse.row = rowToRender;
                         domUtilityService.digest(scopeOfRowToReuse);
                     }
@@ -3272,7 +3270,7 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                         canvas.append(compiledRow);
                         scopeOfRowToAdd.row.elm = compiledRow;
                         domUtilityService.digest(scopeOfRowToAdd);
-                        allRows.push(compiledRow[0]);
+                        allHtmlRows.push(compiledRow[0]);
                     }
                 });
             }

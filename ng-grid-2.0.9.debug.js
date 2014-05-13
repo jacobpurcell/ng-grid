@@ -2,7 +2,7 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 05/09/2014 14:08
+* Compiled At: 05/13/2014 12:46
 ***********************************************/
 (function(window, $) {
 'use strict';
@@ -1825,8 +1825,9 @@ var ngGrid = function ($scope, $attrs, options, sortService, domUtilityService, 
             // set the width of each column based on the number of stars
             angular.forEach(asterisksArray, function(colDef, i) {
                 // Get the ngColumn that matches the current column from columnDefs
-                var ngColumn = $scope.columns[indexMap[colDef.index]];                
-                ngColumn.width = asteriskVal * colDef.width.length;
+                var ngColumn = $scope.columns[indexMap[colDef.index]],
+                    minWidth = ngColumn.minWidth || 0;
+                ngColumn.width = Math.max(minWidth, asteriskVal * colDef.width.length);
                 if (ngColumn.visible !== false) {
                     totalWidth += ngColumn.width;
                 }
@@ -3641,26 +3642,25 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
             }
 
             if (newRowsToRender.length) {
-                var allRows = $('[ng-row]', canvas);
-
                 newRowsToRender.forEach(function (rowToRender) {
 
-                    if (allRows.length >= rowsToRender.length) { // reuse html rows when there are enough of them in the dom
+                    if (allHtmlRows.length >= rowsToRender.length) { // reuse html rows when there are enough of them in the dom
 
-                        // TODO: sort by top (absolute position), and replace based upon that value instead of rowIndex
-                        var sortedRows = _(allRows) // sorting by the css value seems to be slow in IE, so using the row index instead
-                            .sortBy(function (r) {
-                                // Note: also may not be able to rely on this being a number yet, if angular hasn't evaluated it.   
-                                return Number(r.attributes['row-id'].value); // sort by row-id
-                            });
-
+                        // Note: assuming that row index relates to the order of rows.  This may not be that case if aggregating rows.
                         // if scrolling down re-use the first row, otherwise use the last
-                        var currentlyRenderedRowIdxs = Object.keys(currentlyRenderedRowsLookup);
-                        var rowToReuse = rowToRender.rowIndex > currentlyRenderedRowIdxs[currentlyRenderedRowIdxs.length - 1]
-                                       ? sortedRows[0]
-                                       : sortedRows[sortedRows.length - 1];
-                        var scopeOfRowToReuse = angular.element(rowToReuse).scope();
-                        rowToRender.elm = $(rowToReuse);
+                        var currentlyRenderedRowIdxsInOrder = Object.keys(currentlyRenderedRowsLookup);
+                        var lastRowIdx = currentlyRenderedRowIdxsInOrder[currentlyRenderedRowIdxsInOrder.length - 1];
+                        var rowToReuse = rowToRender.rowIndex > lastRowIdx
+                                       ? currentlyRenderedRowsLookup[currentlyRenderedRowIdxsInOrder[0]]
+                                       : currentlyRenderedRowsLookup[lastRowIdx];
+
+                        // remove the row to be reused and add the row being rendered
+                        delete currentlyRenderedRowsLookup[rowToReuse.rowIndex];
+                        currentlyRenderedRowsLookup[rowToRender.rowIndex] = rowToRender;
+
+                        // setup row's properties and digest its scope
+                        var scopeOfRowToReuse = angular.element(rowToReuse.elm).scope();
+                        rowToRender.elm = rowToReuse.elm;
                         scopeOfRowToReuse.row = rowToRender;
                         domUtilityService.digest(scopeOfRowToReuse);
                     }
@@ -3671,7 +3671,7 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                         canvas.append(compiledRow);
                         scopeOfRowToAdd.row.elm = compiledRow;
                         domUtilityService.digest(scopeOfRowToAdd);
-                        allRows.push(compiledRow[0]);
+                        allHtmlRows.push(compiledRow[0]);
                     }
                 });
             }
