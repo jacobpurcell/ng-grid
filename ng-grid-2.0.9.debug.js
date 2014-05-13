@@ -2,7 +2,7 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 05/13/2014 12:46
+* Compiled At: 05/13/2014 14:53
 ***********************************************/
 (function(window, $) {
 'use strict';
@@ -2251,7 +2251,7 @@ var ngRow = function (entity, config, selectionProvider, rowIndex, $utils) {
 	this.rowIndex = rowIndex;
 	this.utils = $utils;
 	this.selected = selectionProvider.getSelection(entity);
-	this.cursor = this.config.enableRowSelection && !this.config.selectWithCheckboxOnly ? 'pointer' : 'default';
+	this.cursor = 'default';
 	this.beforeSelectionChange = config.beforeSelectionChangeCallback;
 	this.afterSelectionChange = config.afterSelectionChangeCallback;
 	this.offsetTop = this.rowIndex * config.rowHeight;
