@@ -88,11 +88,9 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
             }
 
             if (newRowsToRender.length) {
-                var allRows = $('[ng-row]', canvas);
-
                 newRowsToRender.forEach(function (rowToRender) {
 
-                    if (allRows.length >= rowsToRender.length) { // reuse html rows when there are enough of them in the dom
+                    if (allHtmlRows.length >= rowsToRender.length) { // reuse html rows when there are enough of them in the dom
 
                         // Note: assuming that row index relates to the order of rows.  This may not be that case if aggregating rows.
                         // if scrolling down re-use the first row, otherwise use the last
@@ -119,7 +117,7 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                         canvas.append(compiledRow);
                         scopeOfRowToAdd.row.elm = compiledRow;
                         domUtilityService.digest(scopeOfRowToAdd);
-                        allRows.push(compiledRow[0]);
+                        allHtmlRows.push(compiledRow[0]);
                     }
                 });
             }
