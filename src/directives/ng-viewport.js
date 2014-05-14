@@ -8,7 +8,6 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
         var template = "<div row-id='{{ row.rowIndex }}' ng-style=\"rowStyle(row)\" ng-click=\"row.toggleSelected($event)\" ng-class=\"row.alternatingRowClass()\" ng-row></div>\r";
         var currentlyRenderedRowsLookup = [];
 
-        // Note: it's important to try and keep this method performant as it is called whilst scrolling the grid.
         $scope.$on('ngGridEventRows', function (ctx, rowsToRender) {
             var currentlyRenderedRowsLength = currentlyRenderedRowsLookup && Object.keys(currentlyRenderedRowsLookup).length || 0;
 
@@ -31,75 +30,84 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                 }
             });
 
-            var areRowsAlreadyRendered = currentlyRenderedRowsLookup
+            var rowsAlreadyRendered = currentlyRenderedRowsLookup
                 && rowsToRender.length == currentlyRenderedRowsLength
                 && rowsToReplace.length === 0
                 && newRowsToRender.length === 0;
 
-            if (areRowsAlreadyRendered) {
+            if (rowsAlreadyRendered) {
                 return;
-            }
-
-            /////////////////////////////////////////////////////////////////
-            // replace rows whose data may have changed - e.g. when filtering
-            /////////////////////////////////////////////////////////////////
-            rowsToReplace.forEach(function (rowToReplace) {
-                if (rowToReplace) {
-                    var currentRowElement = currentlyRenderedRowsLookup[rowToReplace.rowIndex].elm;
-                    rowToReplace.elm = currentRowElement;
-                    var scopeOfRowToReplace = currentRowElement.scope();
-                    scopeOfRowToReplace.row = rowToReplace;
-                    domUtilityService.digest(scopeOfRowToReplace);
-                    currentlyRenderedRowsLookup[rowToReplace.rowIndex] = rowToReplace;
-                }
-            });
-
-            /////////////////////
-            // remove excess rows
-            /////////////////////
-            if (currentlyRenderedRowsLength > rowsToRender.length) {
-
-                currentlyRenderedRowsLookup.forEach(function (currentlyRenderedRow) {
-
-                    if (!rowsToRenderLookup[currentlyRenderedRow.rowIndex]) {
-                        removeHtmlRowFromDom(currentlyRenderedRow);
-                    }
-
-                });
-            }
-
-            function removeHtmlRowFromDom(row) {
-                var $row = row.elm;
-                $row.scope().$destroy();
-                $row.remove();
-                delete currentlyRenderedRowsLookup[row.rowIndex];
             }
 
             var allHtmlRows = $('[ng-row]', canvas);
 
-            ////////////////////////////////////////////////////////////////////////////////////////////
-            // add new rows to be rendered - if appropriate, reuse rows that are no longer on the screen
-            ////////////////////////////////////////////////////////////////////////////////////////////
+            // can this be done more efficiently
+            rowsToReplace.length > 0 && allHtmlRows.toArray().forEach(function (renderedRow) {
+                var indexOfRenderedRow = Number(renderedRow.attributes['row-id'].value);
+
+                if (rowsToReplace[indexOfRenderedRow]) {
+                    var scopeOfRowToReplace = angular.element(renderedRow).scope();
+                    scopeOfRowToReplace.row = rowsToRenderLookup[indexOfRenderedRow];
+                    scopeOfRowToReplace.row.elm = $(renderedRow);
+
+                    domUtilityService.digest(scopeOfRowToReplace);
+                }
+            });
+
+
+            if (currentlyRenderedRowsLength > rowsToRender.length) {
+                removeExcessHtmlRows();
+            }
+
+            function removeExcessHtmlRows() {
+                if (rowsToRender.length === 0) {
+                    allHtmlRows.toArray().forEach(removeHtmlRowFromDom);
+                }
+                else {
+                    allHtmlRows.each(function (idx, row) {
+                        var $row = $(row);
+
+                        // Note: Check if the row id is a number, as it may be an angular expression if the row hasn't been evaluated by angular yet
+                        var rowIdAttr = $row.attr('row-id');
+                        var rowIdAsString = isNaN(rowIdAttr)
+                            ? angular.element(row).scope().$eval(rowIdAttr.replace("{{", "").replace("}}", ""))// remove curly braces and eval the row id if angular hasn't done it yet
+                            : rowIdAttr;
+
+                        var rowId = Number(rowIdAsString);
+                        if (!rowsToRenderLookup[rowId]) {
+                            removeHtmlRowFromDom($row);
+                        }
+                    });
+                }
+            }
+
+            function removeHtmlRowFromDom(row) {
+                var $row = angular.element(row);
+                $row.scope().$destroy();
+                $row.remove();
+            }
+
             if (newRowsToRender.length) {
+                var allRows = $('[ng-row]', canvas);
+
                 newRowsToRender.forEach(function (rowToRender) {
 
-                    if (allHtmlRows.length >= rowsToRender.length) { // reuse html rows when there are enough of them in the dom
+                    if (allRows.length >= rowsToRender.length) { // reuse html rows when there are enough of them in the dom
 
-                        // Note: assuming that row index relates to the order of rows.  This may not be that case if aggregating rows.
+                        // TODO: sort by top (absolute position), and replace based upon that value instead of rowIndex
+                        var sortedRows = _(allRows) // sorting by the css value seems to be slow in IE, so using the row index instead
+                            .sortBy(function (r) {
+                                // Note: also may not be able to rely on this being a number yet, if angular hasn't evaluated it.   
+                                return Number(r.attributes['row-id'].value); // sort by row-id
+                            });
+
                         // if scrolling down re-use the first row, otherwise use the last
-                        var currentlyRenderedRowIdxsInOrder = Object.keys(currentlyRenderedRowsLookup);
-                        var lastRowIdx = currentlyRenderedRowIdxsInOrder[currentlyRenderedRowIdxsInOrder.length - 1];
-                        var rowToReuse = rowToRender.rowIndex > lastRowIdx
-                                       ? currentlyRenderedRowsLookup[currentlyRenderedRowIdxsInOrder[0]]
-                                       : currentlyRenderedRowsLookup[lastRowIdx];
-
-                        // remove the row to be reused and add the row being rendered
-                        delete currentlyRenderedRowsLookup[rowToReuse.rowIndex];
-                        currentlyRenderedRowsLookup[rowToRender.rowIndex] = rowToRender;
-
-                        // setup row's properties and digest its scope
-                        var scopeOfRowToReuse = rowToReuse.elm.scope();
-                        rowToRender.elm = rowToReuse.elm;
+                        var currentlyRenderedRowIdxs = Object.keys(currentlyRenderedRowsLookup);
+                        var rowToReuse = rowToRender.rowIndex > currentlyRenderedRowIdxs[currentlyRenderedRowIdxs.length - 1]
+                                       ? sortedRows[0]
+                                       : sortedRows[sortedRows.length - 1];
+                        var scopeOfRowToReuse = angular.element(rowToReuse).scope();
+                        rowToRender.elm = $(rowToReuse);
                         scopeOfRowToReuse.row = rowToRender;
                         domUtilityService.digest(scopeOfRowToReuse);
                     }
@@ -110,9 +118,7 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                         canvas.append(compiledRow);
                         scopeOfRowToAdd.row.elm = compiledRow;
                         domUtilityService.digest(scopeOfRowToAdd);
-                        allHtmlRows.push(compiledRow[0]);
-                        currentlyRenderedRowsLookup[rowToRender.rowIndex] = rowToRender;
-                        currentlyRenderedRowsLength = currentlyRenderedRowsLookup.length;
+                        allRows.push(compiledRow[0]);
                     }
                 });
             }
@@ -130,10 +136,10 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                 $scope.$headerContainer.scrollLeft(scrollLeft);
             }
 
-            if ($scope.enableColumnVirtualization && prevScollLeft != scrollLeft) {
+            if (prevScollLeft != scrollLeft) {
                 $scope.adjustScrollLeft(scrollLeft);
-                domUtilityService.digest($scope);
             }
+
 
             if (prevScollTop != scrollTop) {
                 var gridSize = evt.target.clientHeight;
