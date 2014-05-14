@@ -2,7 +2,7 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 05/14/2014 12:11
+* Compiled At: 05/14/2014 15:53
 ***********************************************/
 (function(window, $) {
 'use strict';
@@ -3178,6 +3178,7 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
         var canvas = $('.ngCanvas', elm);
         var template = "<div row-id='{{ row.rowIndex }}' ng-style=\"rowStyle(row)\" ng-click=\"row.toggleSelected($event)\" ng-class=\"row.alternatingRowClass()\" ng-row></div>\r";
         var currentlyRenderedRowsLookup = [];
+
         $scope.$on('ngGridEventRows', function (ctx, rowsToRender) {
             var currentlyRenderedRowsLength = currentlyRenderedRowsLookup && Object.keys(currentlyRenderedRowsLookup).length || 0;
 
@@ -3197,56 +3198,73 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                 }
             });
 
-            var areRowsAlreadyRendered = currentlyRenderedRowsLookup
+            var rowsAlreadyRendered = currentlyRenderedRowsLookup
                 && rowsToRender.length == currentlyRenderedRowsLength
                 && rowsToReplace.length === 0
                 && newRowsToRender.length === 0;
 
-            if (areRowsAlreadyRendered) {
+            if (rowsAlreadyRendered) {
                 return;
-            }
-            rowsToReplace.forEach(function (rowToReplace) {
-                if (rowToReplace) {
-                    var currentRowElement = currentlyRenderedRowsLookup[rowToReplace.rowIndex].elm;
-                    rowToReplace.elm = currentRowElement;
-                    var scopeOfRowToReplace = currentRowElement.scope();
-                    scopeOfRowToReplace.row = rowToReplace;
-                    domUtilityService.digest(scopeOfRowToReplace);
-                    currentlyRenderedRowsLookup[rowToReplace.rowIndex] = rowToReplace;
-                }
-            });
-            if (currentlyRenderedRowsLength > rowsToRender.length) {
-
-                currentlyRenderedRowsLookup.forEach(function (currentlyRenderedRow) {
-
-                    if (!rowsToRenderLookup[currentlyRenderedRow.rowIndex]) {
-                        removeHtmlRowFromDom(currentlyRenderedRow);
-                    }
-
-                });
-            }
-
-            function removeHtmlRowFromDom(row) {
-                var $row = row.elm;
-                $row.scope().$destroy();
-                $row.remove();
-                delete currentlyRenderedRowsLookup[row.rowIndex];
             }
 
             var allHtmlRows = $('[ng-row]', canvas);
+            rowsToReplace.length > 0 && allHtmlRows.toArray().forEach(function (renderedRow) {
+                var indexOfRenderedRow = Number(renderedRow.attributes['row-id'].value);
+
+                if (rowsToReplace[indexOfRenderedRow]) {
+                    var scopeOfRowToReplace = angular.element(renderedRow).scope();
+                    scopeOfRowToReplace.row = rowsToRenderLookup[indexOfRenderedRow];
+                    scopeOfRowToReplace.row.elm = $(renderedRow);
+
+                    domUtilityService.digest(scopeOfRowToReplace);
+                }
+            });
+            if (currentlyRenderedRowsLength > rowsToRender.length) {
+                removeExcessHtmlRows();
+            }
+
+            function removeExcessHtmlRows() {
+                if (rowsToRender.length === 0) {
+                    allHtmlRows.toArray().forEach(removeHtmlRowFromDom);
+                }
+                else {
+                    allHtmlRows.each(function (idx, row) {
+                        var $row = $(row);
+                        var rowIdAttr = $row.attr('row-id');
+                        var rowIdAsString = isNaN(rowIdAttr)
+                            ? angular.element(row).scope().$eval(rowIdAttr.replace("{{", "").replace("}}", ""))
+                            : rowIdAttr;
+
+                        var rowId = Number(rowIdAsString);
+                        if (!rowsToRenderLookup[rowId]) {
+                            removeHtmlRowFromDom($row);
+                        }
+                    });
+                }
+            }
+
+            function removeHtmlRowFromDom(row) {
+                var $row = angular.element(row);
+                $row.scope().$destroy();
+                $row.remove();
+            }
+
             if (newRowsToRender.length) {
+                var allRows = $('[ng-row]', canvas);
+
                 newRowsToRender.forEach(function (rowToRender) {
 
-                    if (allHtmlRows.length >= rowsToRender.length) {
-                        var currentlyRenderedRowIdxsInOrder = Object.keys(currentlyRenderedRowsLookup);
-                        var lastRowIdx = currentlyRenderedRowIdxsInOrder[currentlyRenderedRowIdxsInOrder.length - 1];
-                        var rowToReuse = rowToRender.rowIndex > lastRowIdx
-                                       ? currentlyRenderedRowsLookup[currentlyRenderedRowIdxsInOrder[0]]
-                                       : currentlyRenderedRowsLookup[lastRowIdx];
-                        delete currentlyRenderedRowsLookup[rowToReuse.rowIndex];
-                        currentlyRenderedRowsLookup[rowToRender.rowIndex] = rowToRender;
-                        var scopeOfRowToReuse = rowToReuse.elm.scope();
-                        rowToRender.elm = rowToReuse.elm;
+                    if (allRows.length >= rowsToRender.length) {
+                        var sortedRows = _(allRows) 
+                            .sortBy(function (r) {
+                                return Number(r.attributes['row-id'].value); 
+                            });
+                        var currentlyRenderedRowIdxs = Object.keys(currentlyRenderedRowsLookup);
+                        var rowToReuse = rowToRender.rowIndex > currentlyRenderedRowIdxs[currentlyRenderedRowIdxs.length - 1]
+                                       ? sortedRows[0]
+                                       : sortedRows[sortedRows.length - 1];
+                        var scopeOfRowToReuse = angular.element(rowToReuse).scope();
+                        rowToRender.elm = $(rowToReuse);
                         scopeOfRowToReuse.row = rowToRender;
                         domUtilityService.digest(scopeOfRowToReuse);
                     }
@@ -3257,9 +3275,7 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                         canvas.append(compiledRow);
                         scopeOfRowToAdd.row.elm = compiledRow;
                         domUtilityService.digest(scopeOfRowToAdd);
-                        allHtmlRows.push(compiledRow[0]);
-                        currentlyRenderedRowsLookup[rowToRender.rowIndex] = rowToRender;
-                        currentlyRenderedRowsLength = currentlyRenderedRowsLookup.length;
+                        allRows.push(compiledRow[0]);
                     }
                 });
             }
@@ -3281,7 +3297,6 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                 $scope.adjustScrollLeft(scrollLeft);
                 domUtilityService.digest($scope);
             }
-
             if (prevScollTop != scrollTop) {
                 var gridSize = evt.target.clientHeight;
 
