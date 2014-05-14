@@ -130,11 +130,10 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                 $scope.$headerContainer.scrollLeft(scrollLeft);
             }
 
-            if (prevScollLeft != scrollLeft) {
+            if ($scope.enableColumnVirtualization && prevScollLeft != scrollLeft) {
                 $scope.adjustScrollLeft(scrollLeft);
                 domUtilityService.digest($scope);
             }
-
 
             if (prevScollTop != scrollTop) {
                 var gridSize = evt.target.clientHeight;
