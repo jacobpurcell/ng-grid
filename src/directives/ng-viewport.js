@@ -132,6 +132,7 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
 
             if (prevScollLeft != scrollLeft) {
                 $scope.adjustScrollLeft(scrollLeft);
+                domUtilityService.digest($scope);
             }
 
 
