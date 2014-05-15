@@ -50,10 +50,27 @@ ngDomAccessProvider.prototype.selectionHandlers = function ($scope, elm, domUtil
 
     elm.bind('keydown', keydown);
 
-    function keyup (evt) {
+    var updateThrottleId;
+
+    function keyup(evt) {
         if (evt.keyCode === 16) { //shift key
             self.changeUserSelect(elm, 'text', evt);
         }
+
+        (function ensureAppIsUpToDate() {
+            if (updateThrottleId) {
+                clearTimeout(updateThrottleId);
+            }
+
+            updateThrottleId = setTimeout(function () {
+                if (!$scope.$root.$$phase) {
+                    $scope.$apply();
+                }
+
+                updateThrottleId = null;
+            }, 200);
+        })();
+
         return true;
     }
 
