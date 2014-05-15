@@ -2,7 +2,7 @@
 * ng-grid JavaScript Library
 * Authors: https://github.com/angular-ui/ng-grid/blob/master/README.md 
 * License: MIT (http://www.opensource.org/licenses/mit-license.php)
-* Compiled At: 05/14/2014 15:53
+* Compiled At: 05/15/2014 13:07
 ***********************************************/
 (function(window, $) {
 'use strict';
@@ -978,10 +978,27 @@ ngDomAccessProvider.prototype.selectionHandlers = function ($scope, elm, domUtil
 
     elm.bind('keydown', keydown);
 
-    function keyup (evt) {
+    var updateThrottleId;
+
+    function keyup(evt) {
         if (evt.keyCode === 16) { //shift key
             self.changeUserSelect(elm, 'text', evt);
         }
+
+        (function ensureAppIsUpToDate() {
+            if (updateThrottleId) {
+                clearTimeout(updateThrottleId);
+            }
+
+            updateThrottleId = setTimeout(function () {
+                if (!$scope.$root.$$phase) {
+                    $scope.$apply();
+                }
+
+                updateThrottleId = null;
+            }, 200);
+        })();
+
         return true;
     }
 
