@@ -136,11 +136,12 @@ angular.module('ngGrid.directives').directive('ngViewport', ['$compile', '$domUt
                 $scope.$headerContainer.scrollLeft(scrollLeft);
             }
 
-            if ($scope.enableColumnVirtualization && prevScollLeft != scrollLeft) {
+            // TODO: this could be cached and updated with a watch
+            var containsPinnedColumns = $scope.columns.some(function (col) { return col.pinned && col.visible; });
+            if (containsPinnedColumns && prevScollLeft != scrollLeft) {
                 $scope.adjustScrollLeft(scrollLeft);
                 domUtilityService.digest($scope);
             }
-
 
             if (prevScollTop != scrollTop) {
                 var gridSize = evt.target.clientHeight;

@@ -52,7 +52,7 @@ var ngGrid = function ($scope, $attrs, options, sortService, domUtilityService, 
         //Enable or disable HEAVY column virtualization. This turns off selection checkboxes and column pinning and is designed for spreadsheet-like data.
         enableColumnHeavyVirt: false,
 
-        enableColumnVirtualization: true,
+        enableColumnVirtualization: false,
 
         //Enables the server-side paging feature
         enablePaging: false,
@@ -772,11 +772,10 @@ var ngGrid = function ($scope, $attrs, options, sortService, domUtilityService, 
                     var newLeft = i > 0 ? (scrollLeft + totalLeft) : scrollLeft;
                     domUtilityService.setColLeft(col, newLeft, self);
                     totalLeft += col.width;
-                } else {
-                    if (!self.config.enableColumnVirtualization
-                        || (w >= scrollLeft && colwidths <= scrollLeft + self.rootDim.outerWidth)) {
-                        addCol(col);
-                    }
+                }
+                else if (!self.config.enableColumnVirtualization
+                    || (w >= scrollLeft && colwidths <= scrollLeft + self.rootDim.outerWidth)) {
+                    addCol(col);
                 }
                 colwidths += col.width;
             }
